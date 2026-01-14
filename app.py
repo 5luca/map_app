@@ -1,3 +1,4 @@
+import requests
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
@@ -7,18 +8,24 @@ CORS(app)
 
 @app.route('/vypocet', methods=['GET'])
 def vypocet():
-    # Získání souřadnic z adresy (přijdou jako text)
-    lat = request.args.get('lat', '0')
-    lng = request.args.get('lng', '0')
-    
-    # Tady můžeš udělat nějakou vědeckou analýzu
-    # Pro začátek jen potvrdíme příjem dat
-    odpoved = {
-        "status": "ok",
-        "zprava": f"Python přijal souřadnice!\nŠířka: {lat}\nDélka: {lng}\nAnalyzuji terén..."
-    }
-    
-    return jsonify(odpoved)
+    lat = request.args.get('lat')
+    lng = request.args.get('lng')
+
+    try:
+        # Zavoláme bezplatnou službu pro zjištění nadmořské výšky
+        url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lng}"
+        response = requests.get(url).json()
+        
+        vyska = response['results'][0]['elevation']
+        
+        zprava = f"Analýza dokončena!\nBod se nachází v nadmořské výšce {vyska} metrů."
+        
+        return jsonify({
+            'status': 'ok',
+            'zprava': zprava
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'zprava': "Nepodařilo se získat data o terénu."})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
