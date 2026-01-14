@@ -11,21 +11,31 @@ def vypocet():
     lat = request.args.get('lat')
     lng = request.args.get('lng')
 
+    if not lat or not lng:
+        return jsonify({'status': 'error', 'zprava': 'Chybí souřadnice!'})
+
     try:
-        # Zavoláme bezplatnou službu pro zjištění nadmořské výšky
-        url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lng}"
-        response = requests.get(url).json()
+        # Voláme veřejné API pro nadmořskou výšku
+        # Dokumentace: https://open-elevation.com/
+        api_url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lng}"
         
-        vyska = response['results'][0]['elevation']
+        # Server (Render) teď požádá jiný server o data
+        response = requests.get(api_url, timeout=10)
+        data = response.json()
         
-        zprava = f"Analýza dokončena!\nBod se nachází v nadmořské výšce {vyska} metrů."
+        # Vytáhneme nadmořskou výšku z výsledků
+        vyska = data['results'][0]['elevation']
         
         return jsonify({
             'status': 'ok',
-            'zprava': zprava
+            'zprava': f"Zjištěná nadmořská výška: {vyska} m n. m."
         })
+        
     except Exception as e:
-        return jsonify({'status': 'error', 'zprava': "Nepodařilo se získat data o terénu."})
+        return jsonify({
+            'status': 'error', 
+            'zprava': f"Chyba při analýze terénu: {str(e)}"
+        })
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
